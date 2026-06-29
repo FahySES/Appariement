@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tournoi suisse de bar</title>
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --panel: #fffdf8;
+      --ink: #24211c;
+      --muted: #716b61;
+      --line: #ded6c8;
+      --accent: #0f766e;
+      --accent-dark: #0b5f59;
+      --danger: #b42318;
+      --warn: #9a6700;
+      --ok: #16703a;
+      --shadow: 0 10px 24px rgba(38, 32, 24, 0.08);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      color-scheme: light;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        linear-gradient(180deg, rgba(15, 118, 110, 0.08), transparent 260px),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      min-height: 46px;
+      border: 0;
+      border-radius: var(--radius);
+      padding: 0.78rem 1rem;
+      font-weight: 750;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    input {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0.8rem 0.9rem;
+      background: #fff;
+      color: var(--ink);
+      font-size: 16px;
+    }
+
+    input:focus, button:focus-visible {
+      outline: 3px solid rgba(15, 118, 110, 0.25);
+      outline-offset: 2px;
+    }
+
+    .app {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: max(16px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
+    }
+
+    header {
+      padding: 10px 2px 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 8vw, 3rem);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0.55rem 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 0.65rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .primary:not(:disabled):active {
+      background: var(--accent-dark);
+    }
+
+    .secondary {
+      background: #e8f3f1;
+      color: var(--accent-dark);
+    }
+
+    .danger {
+      background: #ffe8e5;
+      color: var(--danger);
+    }
+
+    .ghost {
+      background: #f0ece3;
+      color: var(--ink);
+    }
+
+    .tabs {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.35rem;
+      padding: 8px 0;
+      background: rgba(247, 244, 238, 0.94);
+      backdrop-filter: blur(10px);
+    }
+
+    .tab {
+      min-height: 42px;
+      padding: 0.55rem 0.35rem;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      background: var(--panel);
+      color: var(--ink);
+      border-color: var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    main {
+      display: grid;
+      gap: 14px;
+    }
+
+    section {
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    section.active {
+      display: block;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.8rem;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.22rem;
+      letter-spacing: 0;
+    }
+
+    .hint {
+      margin: 0.25rem 0 0;
+      color: var(--muted);
+      line-height: 1.35;
+      font-size: 0.94rem;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      background: #f0ece3;
+      color: var(--muted);
+      font-weight: 750;
+      font-size: 0.86rem;
+      white-space: nowrap;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.55rem;
+      align-items: stretch;
+      margin-bottom: 12px;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      padding: 1rem;
+      color: var(--muted);
+      background: #fbfaf6;
+      text-align: center;
+    }
+
+    .player-row, .standing-row, .game, .round-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .player-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.65rem;
+      align-items: center;
+      padding: 0.75rem;
+    }
+
+    .player-name {
+      font-weight: 800;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    .round-controls {
+      display: grid;
+      gap: 0.75rem;
+      margin-bottom: 12px;
+    }
+
+    .notice {
+      border-radius: var(--radius);
+      padding: 0.8rem;
+      background: #fff8df;
+      border: 1px solid #ecd27d;
+      color: #654900;
+      line-height: 1.35;
+      font-weight: 650;
+    }
+
+    .game {
+      padding: 0.8rem;
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .board-line {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .side {
+      min-width: 0;
+    }
+
+    .side strong {
+      display: block;
+      overflow-wrap: anywhere;
+      line-height: 1.2;
+    }
+
+    .color-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 800;
+    }
+
+    .vs {
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .result-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.45rem;
+    }
+
+    .result-buttons button {
+      background: #f0ece3;
+      color: var(--ink);
+      min-height: 48px;
+    }
+
+    .result-buttons button.selected {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .bye {
+      padding: 0.8rem;
+      border: 1px solid #c8e3cf;
+      background: #f0fff4;
+      color: #14532d;
+      border-radius: var(--radius);
+      font-weight: 750;
+      line-height: 1.35;
+    }
+
+    .standing-row {
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      gap: 0.65rem;
+      padding: 0.75rem;
+      align-items: start;
+    }
+
+    .rank {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #f0ece3;
+      font-weight: 850;
+    }
+
+    .points {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: var(--accent-dark);
+      white-space: nowrap;
+    }
+
+    .meta-grid {
+      display: grid;
+      gap: 0.2rem;
+      margin-top: 0.35rem;
+    }
+
+    .round-card {
+      padding: 0.8rem;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .round-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.7rem;
+      font-weight: 850;
+    }
+
+    .history-line {
+      color: var(--muted);
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .footer-note {
+      margin: 14px 2px 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.35;
+    }
+
+    @media (min-width: 760px) {
+      .app { padding-left: 22px; padding-right: 22px; }
+      main {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+      section.active { display: block; }
+      section[data-tab="standings"] { grid-column: span 2; }
+      .tabs { max-width: 620px; }
+      .round-controls { grid-template-columns: 1fr auto; align-items: center; }
+    }
+
+    @media (max-width: 380px) {
+      .tab { font-size: 0.78rem; }
+      .form-row { grid-template-columns: 1fr; }
+      .board-line { grid-template-columns: 1fr; }
+      .vs { display: none; }
+      .standing-row { grid-template-columns: 32px 1fr; }
+      .points { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Tournoi d'échecs</h1>
+      <p class="subtitle">Appariements suisses simplifiés, résultats rapides, classement toujours visible.</p>
+      <div class="top-actions">
+        <button class="primary" id="startBtn">Démarrer le tournoi</button>
+        <button class="danger" id="resetBtn">Réinitialiser</button>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Sections">
+      <button class="tab active" data-target="players">Joueurs</button>
+      <button class="tab" data-target="round">Ronde</button>
+      <button class="tab" data-target="standings">Classement</button>
+      <button class="tab" data-target="history">Historique</button>
+    </nav>
+
+    <main>
+      <section class="active" data-tab="players">
+        <div class="section-head">
+          <div>
+            <h2>Inscription</h2>
+            <p class="hint" id="playersHint">Ajoute entre 4 et 30 joueurs avant de démarrer.</p>
+          </div>
+          <span class="status" id="playersCount">0 joueur</span>
+        </div>
+        <form class="form-row" id="playerForm" autocomplete="off">
+          <input id="playerName" name="playerName" maxlength="50" placeholder="Prénom ou nom" aria-label="Nom du joueur">
+          <button class="primary" type="submit">Ajouter</button>
+        </form>
+        <div class="list" id="playersList"></div>
+      </section>
+
+      <section data-tab="round">
+        <div class="section-head">
+          <div>
+            <h2 id="roundTitle">Ronde actuelle</h2>
+            <p class="hint" id="roundHint">Démarre le tournoi pour générer la première ronde.</p>
+          </div>
+          <span class="status" id="roundStatus">En attente</span>
+        </div>
+        <div class="round-controls">
+          <div id="roundMessage" class="notice" hidden></div>
+          <button class="primary" id="nextRoundBtn">Générer la ronde suivante</button>
+        </div>
+        <div class="list" id="roundList"></div>
+      </section>
+
+      <section data-tab="standings">
+        <div class="section-head">
+          <div>
+            <h2>Classement</h2>
+            <p class="hint">Tri par points, puis par ordre alphabétique.</p>
+          </div>
+          <span class="status" id="savedStatus">Sauvegardé</span>
+        </div>
+        <div class="list" id="standingsList"></div>
+      </section>
+
+      <section data-tab="history">
+        <div class="section-head">
+          <div>
+            <h2>Historique</h2>
+            <p class="hint">Toutes les rondes jouées ou en cours.</p>
+          </div>
+          <span class="status" id="historyCount">0 ronde</span>
+        </div>
+        <div class="list" id="historyList"></div>
+      </section>
+    </main>
+
+    <p class="footer-note">Les données restent dans ce navigateur via localStorage. Le système évite les doublons d'adversaires en priorité.</p>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "barChessSwissTournament.v1";
+    const COLORS = { WHITE: "Blanc", BLACK: "Noir", BYE: "Exempt" };
+
+    const initialState = {
+      started: false,
+      currentRound: 0,
+      players: [],
+      rounds: [],
+      activeTab: "players"
+    };
+
+    let state = loadState();
+
+    const $ = (selector) => document.querySelector(selector);
+    const els = {
+      startBtn: $("#startBtn"),
+      resetBtn: $("#resetBtn"),
+      playerForm: $("#playerForm"),
+      playerName: $("#playerName"),
+      playersHint: $("#playersHint"),
+      playersCount: $("#playersCount"),
+      playersList: $("#playersList"),
+      roundTitle: $("#roundTitle"),
+      roundHint: $("#roundHint"),
+      roundStatus: $("#roundStatus"),
+      roundMessage: $("#roundMessage"),
+      nextRoundBtn: $("#nextRoundBtn"),
+      roundList: $("#roundList"),
+      standingsList: $("#standingsList"),
+      historyList: $("#historyList"),
+      historyCount: $("#historyCount"),
+      savedStatus: $("#savedStatus"),
+      tabs: Array.from(document.querySelectorAll(".tab")),
+      sections: Array.from(document.querySelectorAll("section[data-tab]"))
+    };
+
+    function uid() {
+      return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+    }
+
+    function cleanName(name) {
+      return name.trim().replace(/\s+/g, " ");
+    }
+
+    function formatScore(score) {
+      return Number.isInteger(score) ? String(score) : score.toFixed(1).replace(".", ",");
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(initialState);
+        const parsed = JSON.parse(raw);
+        return {
+          ...structuredClone(initialState),
+          ...parsed,
+          players: Array.isArray(parsed.players) ? parsed.players : [],
+          rounds: Array.isArray(parsed.rounds) ? parsed.rounds : []
+        };
+      } catch {
+        return structuredClone(initialState);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      els.savedStatus.textContent = "Sauvegardé";
+    }
+
+    function setTab(tabName) {
+      state.activeTab = tabName;
+      els.tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.target === tabName));
+      els.sections.forEach((section) => section.classList.toggle("active", section.dataset.tab === tabName));
+      saveState();
+    }
+
+    function playerById(id) {
+      return state.players.find((player) => player.id === id);
+    }
+
+    function standings() {
+      return [...state.players].sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
+      });
+    }
+
+    function hasUnfinishedRound() {
+      const round = state.rounds[state.rounds.length - 1];
+      return Boolean(round && round.games.some((game) => !game.result));
+    }
+
+    function addPlayer(name) {
+      const cleaned = cleanName(name);
+      if (!cleaned || state.started || state.players.length >= 30) return;
+      const duplicate = state.players.some((player) => player.name.toLowerCase() === cleaned.toLowerCase());
+      if (duplicate) return;
+
+      state.players.push({
+        id: uid(),
+        name: cleaned,
+        score: 0,
+        opponents: [],
+        colors: [],
+        hadBye: false
+      });
+      els.playerName.value = "";
+      saveAndRender();
+    }
+
+    function removePlayer(id) {
+      if (state.started) return;
+      state.players = state.players.filter((player) => player.id !== id);
+      saveAndRender();
+    }
+
+    function startTournament() {
+      if (state.started || state.players.length < 4) return;
+      state.started = true;
+      state.currentRound = 0;
+      generateNextRound();
+      setTab("round");
+    }
+
+    function resetTournament() {
+      if (!confirm("Réinitialiser complètement le tournoi ?")) return;
+      state = structuredClone(initialState);
+      localStorage.removeItem(STORAGE_KEY);
+      render();
+    }
+
+    function generateNextRound() {
+      if (!state.started || hasUnfinishedRound()) return;
+      const roundNumber = state.currentRound + 1;
+      const pairing = createPairings(state.players);
+
+      if (pairing.bye) {
+        const byePlayer = playerById(pairing.bye);
+        byePlayer.score += 1;
+        byePlayer.colors.push(COLORS.BYE);
+        byePlayer.hadBye = true;
+      }
+
+      state.currentRound = roundNumber;
+      state.rounds.push({
+        number: roundNumber,
+        games: pairing.games.map((game) => ({ ...game, result: null })),
+        bye: pairing.bye,
+        warning: pairing.warning
+      });
+      saveAndRender();
+    }
+
+    function createPairings(players) {
+      const available = standings();
+      const bye = pickBye(available);
+      const pool = bye ? available.filter((player) => player.id !== bye.id) : available;
+      const result = pairScoreGroups(pool);
+      return {
+        games: result.games,
+        bye: bye ? bye.id : null,
+        warning: result.warning
+      };
+    }
+
+    function pickBye(sortedPlayers) {
+      if (sortedPlayers.length % 2 === 0) return null;
+      const candidates = [...sortedPlayers].sort((a, b) => {
+        if (a.hadBye !== b.hadBye) return a.hadBye ? 1 : -1;
+        if (a.score !== b.score) return a.score - b.score;
+        return b.opponents.length - a.opponents.length;
+      });
+      return candidates[0];
+    }
+
+    function pairScoreGroups(sortedPlayers) {
+      const groups = new Map();
+      sortedPlayers.forEach((player) => {
+        const key = String(player.score);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(player);
+      });
+
+      const scores = [...groups.keys()].map(Number).sort((a, b) => b - a);
+      let carry = [];
+      const games = [];
+      let warning = "";
+
+      scores.forEach((score) => {
+        const group = [...carry, ...groups.get(String(score))];
+        carry = [];
+        if (group.length % 2 === 1) carry.push(group.pop());
+        const paired = pairGroupBestEffort(group);
+        games.push(...paired.games);
+        carry.push(...paired.leftovers);
+        if (paired.leftovers.length) warning = "Un appariement parfait n'a pas été possible, le meilleur choix sans doublon a été utilisé.";
+      });
+
+      if (carry.length) {
+        const paired = pairGroupBestEffort(carry);
+        games.push(...paired.games);
+        if (paired.leftovers.length) {
+          const forced = pairRemainingWithFallback(paired.leftovers);
+          games.push(...forced.games);
+          warning = "Certains joueurs ont été appariés au score le plus proche disponible.";
+        }
+      }
+
+      return { games, warning };
+    }
+
+    function pairGroupBestEffort(group) {
+      const players = [...group];
+      const games = [];
+      const leftovers = [];
+
+      while (players.length >= 2) {
+        const first = players.shift();
+        let bestIndex = -1;
+        let bestCost = Infinity;
+
+        players.forEach((candidate, index) => {
+          if (first.opponents.includes(candidate.id)) return;
+          const cost = pairingCost(first, candidate);
+          if (cost < bestCost) {
+            bestCost = cost;
+            bestIndex = index;
+          }
+        });
+
+        if (bestIndex === -1) {
+          leftovers.push(first);
+          continue;
+        }
+
+        const opponent = players.splice(bestIndex, 1)[0];
+        games.push(assignColors(first, opponent));
+      }
+
+      leftovers.push(...players);
+      return { games, leftovers };
+    }
+
+    function pairRemainingWithFallback(players) {
+      const remaining = [...players];
+      const games = [];
+      while (remaining.length >= 2) {
+        const first = remaining.shift();
+        let bestIndex = 0;
+        let bestCost = Infinity;
+        remaining.forEach((candidate, index) => {
+          const duplicatePenalty = first.opponents.includes(candidate.id) ? 10000 : 0;
+          const cost = duplicatePenalty + pairingCost(first, candidate);
+          if (cost < bestCost) {
+            bestCost = cost;
+            bestIndex = index;
+          }
+        });
+        const opponent = remaining.splice(bestIndex, 1)[0];
+        games.push(assignColors(first, opponent));
+      }
+      return { games };
+    }
+
+    function pairingCost(a, b) {
+      return Math.abs(a.score - b.score) * 100 + colorConflictCost(a, b);
+    }
+
+    function lastPlayableColor(player) {
+      for (let i = player.colors.length - 1; i >= 0; i -= 1) {
+        if (player.colors[i] !== COLORS.BYE) return player.colors[i];
+      }
+      return null;
+    }
+
+    function colorStreak(player) {
+      const last = lastPlayableColor(player);
+      if (!last) return { color: null, count: 0 };
+      let count = 0;
+      for (let i = player.colors.length - 1; i >= 0; i -= 1) {
+        if (player.colors[i] === COLORS.BYE) continue;
+        if (player.colors[i] !== last) break;
+        count += 1;
+      }
+      return { color: last, count };
+    }
+
+    function preferenceFor(player) {
+      const streak = colorStreak(player);
+      if (!streak.color) return null;
+      return streak.color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
+    }
+
+    function colorConflictCost(white, black) {
+      const whiteCost = colorCost(white, COLORS.WHITE) + colorCost(black, COLORS.BLACK);
+      const blackCost = colorCost(white, COLORS.BLACK) + colorCost(black, COLORS.WHITE);
+      return Math.min(whiteCost, blackCost);
+    }
+
+    function colorCost(player, proposedColor) {
+      const pref = preferenceFor(player);
+      const streak = colorStreak(player);
+      let cost = pref && pref !== proposedColor ? 3 : 0;
+      if (streak.color === proposedColor && streak.count >= 2) cost += 20;
+      return cost;
+    }
+
+    function assignColors(a, b) {
+      const aWhiteCost = colorCost(a, COLORS.WHITE) + colorCost(b, COLORS.BLACK);
+      const bWhiteCost = colorCost(b, COLORS.WHITE) + colorCost(a, COLORS.BLACK);
+      const aWhite = aWhiteCost <= bWhiteCost;
+      return aWhite
+        ? { white: a.id, black: b.id }
+        : { white: b.id, black: a.id };
+    }
+
+    function setResult(roundNumber, gameIndex, result) {
+      const round = state.rounds.find((item) => item.number === roundNumber);
+      if (!round) return;
+      const game = round.games[gameIndex];
+      if (!game || game.result) return;
+
+      const white = playerById(game.white);
+      const black = playerById(game.black);
+      if (!white || !black) return;
+
+      if (result === "1-0") white.score += 1;
+      if (result === "0-1") black.score += 1;
+      if (result === "½-½") {
+        white.score += 0.5;
+        black.score += 0.5;
+      }
+
+      white.opponents.push(black.id);
+      black.opponents.push(white.id);
+      white.colors.push(COLORS.WHITE);
+      black.colors.push(COLORS.BLACK);
+      game.result = result;
+      saveAndRender();
+    }
+
+    function saveAndRender() {
+      saveState();
+      render();
+    }
+
+    function render() {
+      renderTabs();
+      renderPlayers();
+      renderRound();
+      renderStandings();
+      renderHistory();
+      saveState();
+    }
+
+    function renderTabs() {
+      els.tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.target === state.activeTab));
+      els.sections.forEach((section) => section.classList.toggle("active", section.dataset.tab === state.activeTab));
+    }
+
+    function renderPlayers() {
+      const count = state.players.length;
+      els.playersCount.textContent = `${count} joueur${count > 1 ? "s" : ""}`;
+      els.playersHint.textContent = state.started
+        ? "Le tournoi est démarré, la liste des joueurs est verrouillée."
+        : "Ajoute entre 4 et 30 joueurs avant de démarrer.";
+      els.startBtn.disabled = state.started || count < 4;
+      els.playerName.disabled = state.started || count >= 30;
+      els.playerForm.querySelector("button").disabled = state.started || count >= 30;
+
+      if (!count) {
+        els.playersList.innerHTML = `<div class="empty">Aucun joueur inscrit.</div>`;
+        return;
+      }
+
+      els.playersList.innerHTML = state.players.map((player) => `
+        <div class="player-row">
+          <div>
+            <div class="player-name">${escapeHtml(player.name)}</div>
+            <div class="small">${formatScore(player.score)} point${player.score > 1 ? "s" : ""}</div>
+          </div>
+          <button class="danger" data-remove="${player.id}" ${state.started ? "disabled" : ""}>Supprimer</button>
+        </div>
+      `).join("");
+    }
+
+    function renderRound() {
+      const round = state.rounds[state.rounds.length - 1];
+      const unfinished = hasUnfinishedRound();
+      els.roundTitle.textContent = round ? `Ronde ${round.number}` : "Ronde actuelle";
+      els.roundStatus.textContent = !state.started ? "En attente" : unfinished ? "Résultats attendus" : "Ronde terminée";
+      els.roundHint.textContent = !state.started
+        ? "Démarre le tournoi pour générer la première ronde."
+        : unfinished
+          ? "Saisis tous les résultats avant la ronde suivante."
+          : "Tu peux générer la ronde suivante.";
+      els.nextRoundBtn.disabled = !state.started || unfinished;
+      els.nextRoundBtn.textContent = state.currentRound === 0 ? "Générer la ronde 1" : "Générer la ronde suivante";
+
+      const message = round && round.warning ? round.warning : "";
+      els.roundMessage.hidden = !message;
+      els.roundMessage.textContent = message;
+
+      if (!round) {
+        els.roundList.innerHTML = `<div class="empty">Aucune ronde générée.</div>`;
+        return;
+      }
+
+      const gamesHtml = round.games.map((game, index) => {
+        const white = playerById(game.white);
+        const black = playerById(game.black);
+        return `
+          <div class="game">
+            <div class="board-line">
+              <div class="side">
+                <span class="color-label">Blanc</span>
+                <strong>${escapeHtml(white?.name || "Joueur inconnu")}</strong>
+              </div>
+              <span class="vs">contre</span>
+              <div class="side">
+                <span class="color-label">Noir</span>
+                <strong>${escapeHtml(black?.name || "Joueur inconnu")}</strong>
+              </div>
+            </div>
+            <div class="result-buttons" aria-label="Résultat">
+              ${["1-0", "0-1", "½-½"].map((result) => `
+                <button
+                  class="${game.result === result ? "selected" : ""}"
+                  data-result="${result}"
+                  data-round="${round.number}"
+                  data-game="${index}"
+                  ${game.result ? "disabled" : ""}
+                >${result}</button>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const byeHtml = round.bye
+        ? `<div class="bye">${escapeHtml(playerById(round.bye)?.name || "Joueur inconnu")} est exempt et marque 1 point.</div>`
+        : "";
+      els.roundList.innerHTML = byeHtml + gamesHtml;
+    }
+
+    function renderStandings() {
+      const rows = standings();
+      if (!rows.length) {
+        els.standingsList.innerHTML = `<div class="empty">Le classement apparaîtra ici.</div>`;
+        return;
+      }
+
+      els.standingsList.innerHTML = rows.map((player, index) => {
+        const opponents = player.opponents
+          .map((id) => playerById(id)?.name)
+          .filter(Boolean)
+          .join(", ") || "Aucun";
+        const colors = player.colors.join(", ") || "Aucune";
+        return `
+          <div class="standing-row">
+            <div class="rank">${index + 1}</div>
+            <div>
+              <div class="player-name">${escapeHtml(player.name)}</div>
+              <div class="meta-grid small">
+                <span>Couleurs : ${escapeHtml(colors)}</span>
+                <span>Adversaires : ${escapeHtml(opponents)}</span>
+              </div>
+            </div>
+            <div class="points">${formatScore(player.score)} pt${player.score > 1 ? "s" : ""}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderHistory() {
+      const count = state.rounds.length;
+      els.historyCount.textContent = `${count} ronde${count > 1 ? "s" : ""}`;
+      if (!count) {
+        els.historyList.innerHTML = `<div class="empty">Aucun historique pour le moment.</div>`;
+        return;
+      }
+
+      els.historyList.innerHTML = [...state.rounds].reverse().map((round) => {
+        const lines = round.games.map((game) => {
+          const white = playerById(game.white)?.name || "Joueur inconnu";
+          const black = playerById(game.black)?.name || "Joueur inconnu";
+          return `<div class="history-line">${escapeHtml(white)} - ${escapeHtml(black)} : ${game.result || "en attente"}</div>`;
+        }).join("");
+        const bye = round.bye
+          ? `<div class="history-line">Exempt : ${escapeHtml(playerById(round.bye)?.name || "Joueur inconnu")} (+1)</div>`
+          : "";
+        return `
+          <div class="round-card">
+            <div class="round-title">
+              <span>Ronde ${round.number}</span>
+              <span>${round.games.every((game) => game.result) ? "Terminée" : "En cours"}</span>
+            </div>
+            ${bye}${lines}
+          </div>
+        `;
+      }).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    els.playerForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      addPlayer(els.playerName.value);
+    });
+
+    els.playersList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-remove]");
+      if (button) removePlayer(button.dataset.remove);
+    });
+
+    els.startBtn.addEventListener("click", startTournament);
+    els.resetBtn.addEventListener("click", resetTournament);
+    els.nextRoundBtn.addEventListener("click", generateNextRound);
+
+    els.roundList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-result]");
+      if (!button) return;
+      setResult(Number(button.dataset.round), Number(button.dataset.game), button.dataset.result);
+    });
+
+    els.tabs.forEach((tab) => {
+      tab.addEventListener("click", () => setTab(tab.dataset.target));
+    });
+
+    render();
+  </script>
+</body>
+</html>
