@@ -210,7 +210,7 @@
 
     .form-row {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: minmax(0, 1fr) minmax(112px, 150px) auto;
       gap: 0.55rem;
       align-items: stretch;
       margin-bottom: 12px;
@@ -444,6 +444,7 @@
         </div>
         <form class="form-row" id="playerForm" autocomplete="off">
           <input id="playerName" name="playerName" maxlength="50" placeholder="Prénom ou nom" aria-label="Nom du joueur">
+          <input id="playerRating" name="playerRating" type="number" inputmode="numeric" min="0" max="4000" step="1" placeholder="Niveau" aria-label="Classement initial">
           <button class="primary" type="submit">Ajouter</button>
         </form>
         <div class="list" id="playersList"></div>
@@ -468,7 +469,7 @@
         <div class="section-head">
           <div>
             <h2>Classement</h2>
-            <p class="hint">Tri par points, puis par ordre alphabétique.</p>
+            <p class="hint">Tri par points, puis par classement initial.</p>
           </div>
           <span class="status" id="savedStatus">Sauvegardé</span>
         </div>
@@ -510,6 +511,7 @@
       resetBtn: $("#resetBtn"),
       playerForm: $("#playerForm"),
       playerName: $("#playerName"),
+      playerRating: $("#playerRating"),
       playersHint: $("#playersHint"),
       playersCount: $("#playersCount"),
       playersList: $("#playersList"),
@@ -535,6 +537,11 @@
       return name.trim().replace(/\s+/g, " ");
     }
 
+    function parseRating(value) {
+      const rating = Number.parseInt(String(value).trim(), 10);
+      return Number.isFinite(rating) && rating >= 0 ? rating : 1000;
+    }
+
     function formatScore(score) {
       return Number.isInteger(score) ? String(score) : score.toFixed(1).replace(".", ",");
     }
@@ -547,7 +554,12 @@
         return {
           ...structuredClone(initialState),
           ...parsed,
-          players: Array.isArray(parsed.players) ? parsed.players : [],
+          players: Array.isArray(parsed.players)
+            ? parsed.players.map((player) => ({
+                ...player,
+                initialRating: parseRating(player.initialRating ?? player.rating ?? 1000)
+              }))
+            : [],
           rounds: Array.isArray(parsed.rounds) ? parsed.rounds : []
         };
       } catch {
@@ -574,6 +586,7 @@
     function standings() {
       return [...state.players].sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
+        if (b.initialRating !== a.initialRating) return b.initialRating - a.initialRating;
         return a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
       });
     }
@@ -583,7 +596,7 @@
       return Boolean(round && round.games.some((game) => !game.result));
     }
 
-    function addPlayer(name) {
+    function addPlayer(name, ratingValue) {
       const cleaned = cleanName(name);
       if (!cleaned || state.started || state.players.length >= 30) return;
       const duplicate = state.players.some((player) => player.name.toLowerCase() === cleaned.toLowerCase());
@@ -592,12 +605,14 @@
       state.players.push({
         id: uid(),
         name: cleaned,
+        initialRating: parseRating(ratingValue),
         score: 0,
         opponents: [],
         colors: [],
         hadBye: false
       });
       els.playerName.value = "";
+      els.playerRating.value = "";
       saveAndRender();
     }
 
@@ -634,17 +649,27 @@
         byePlayer.hadBye = true;
       }
 
+      pairing.games.forEach((game) => recordGameColors(game));
       state.currentRound = roundNumber;
       state.rounds.push({
         number: roundNumber,
-        games: pairing.games.map((game) => ({ ...game, result: null })),
+        games: pairing.games.map((game) => ({ ...game, result: null, colorsRecorded: true })),
         bye: pairing.bye,
         warning: pairing.warning
       });
       saveAndRender();
     }
 
+    function recordGameColors(game) {
+      const white = playerById(game.white);
+      const black = playerById(game.black);
+      if (!white || !black) return;
+      white.colors.push(COLORS.WHITE);
+      black.colors.push(COLORS.BLACK);
+    }
+
     function createPairings(players) {
+      if (state.currentRound === 0) return createFirstRoundPairings(players);
       const available = standings();
       const bye = pickBye(available);
       const pool = bye ? available.filter((player) => player.id !== bye.id) : available;
@@ -654,6 +679,39 @@
         bye: bye ? bye.id : null,
         warning: result.warning
       };
+    }
+
+    function createFirstRoundPairings(players) {
+      const sorted = [...players].sort((a, b) => {
+        if (b.initialRating !== a.initialRating) return b.initialRating - a.initialRating;
+        return a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
+      });
+      const bye = sorted.length % 2 === 1 ? pickFirstRoundBye(sorted) : null;
+      const pool = bye ? sorted.filter((player) => player.id !== bye.id) : sorted;
+      const half = pool.length / 2;
+      const topHalf = pool.slice(0, half);
+      const bottomHalf = pool.slice(half);
+      const games = topHalf.map((topPlayer, index) => {
+        const bottomPlayer = bottomHalf[index];
+        const topHasWhite = index % 2 === 0;
+        return topHasWhite
+          ? { white: topPlayer.id, black: bottomPlayer.id }
+          : { white: bottomPlayer.id, black: topPlayer.id };
+      });
+
+      return {
+        games,
+        bye: bye ? bye.id : null,
+        warning: "Première ronde générée par classement initial : moitié haute contre moitié basse."
+      };
+    }
+
+    function pickFirstRoundBye(sortedByRating) {
+      return [...sortedByRating].sort((a, b) => {
+        if (a.hadBye !== b.hadBye) return a.hadBye ? 1 : -1;
+        if (a.initialRating !== b.initialRating) return a.initialRating - b.initialRating;
+        return a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
+      })[0];
     }
 
     function pickBye(sortedPlayers) {
@@ -826,8 +884,10 @@
 
       white.opponents.push(black.id);
       black.opponents.push(white.id);
-      white.colors.push(COLORS.WHITE);
-      black.colors.push(COLORS.BLACK);
+      if (!game.colorsRecorded) {
+        recordGameColors(game);
+        game.colorsRecorded = true;
+      }
       game.result = result;
       saveAndRender();
     }
@@ -859,6 +919,7 @@
         : "Ajoute entre 4 et 30 joueurs avant de démarrer.";
       els.startBtn.disabled = state.started || count < 4;
       els.playerName.disabled = state.started || count >= 30;
+      els.playerRating.disabled = state.started || count >= 30;
       els.playerForm.querySelector("button").disabled = state.started || count >= 30;
 
       if (!count) {
@@ -870,6 +931,7 @@
         <div class="player-row">
           <div>
             <div class="player-name">${escapeHtml(player.name)}</div>
+            <div class="small">Classement initial : ${player.initialRating}</div>
             <div class="small">${formatScore(player.score)} point${player.score > 1 ? "s" : ""}</div>
           </div>
           <button class="danger" data-remove="${player.id}" ${state.started ? "disabled" : ""}>Supprimer</button>
@@ -955,6 +1017,7 @@
             <div>
               <div class="player-name">${escapeHtml(player.name)}</div>
               <div class="meta-grid small">
+                <span>Classement initial : ${player.initialRating}</span>
                 <span>Couleurs : ${escapeHtml(colors)}</span>
                 <span>Adversaires : ${escapeHtml(opponents)}</span>
               </div>
@@ -1005,7 +1068,7 @@
 
     els.playerForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      addPlayer(els.playerName.value);
+      addPlayer(els.playerName.value, els.playerRating.value);
     });
 
     els.playersList.addEventListener("click", (event) => {
