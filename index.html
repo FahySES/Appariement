@@ -422,6 +422,9 @@
       <p class="subtitle">Appariements suisses simplifiés, résultats rapides, classement toujours visible.</p>
       <div class="top-actions">
         <button class="primary" id="startBtn">Démarrer le tournoi</button>
+        <button class="secondary" id="exportBtn">Exporter le tournoi</button>
+        <button class="ghost" id="importBtn">Importer une sauvegarde</button>
+        <input id="importFile" type="file" accept=".json,application/json" hidden>
         <button class="danger" id="resetBtn">Réinitialiser</button>
       </div>
     </header>
@@ -488,7 +491,7 @@
       </section>
     </main>
 
-    <p class="footer-note">Les données restent dans ce navigateur via localStorage. Le système évite les doublons d'adversaires en priorité.</p>
+    <p class="footer-note">Les données restent dans ce navigateur via localStorage. Utilise « Exporter le tournoi » pour conserver une copie indépendante au format JSON.</p>
   </div>
 
   <script>
@@ -508,6 +511,9 @@
     const $ = (selector) => document.querySelector(selector);
     const els = {
       startBtn: $("#startBtn"),
+      exportBtn: $("#exportBtn"),
+      importBtn: $("#importBtn"),
+      importFile: $("#importFile"),
       resetBtn: $("#resetBtn"),
       playerForm: $("#playerForm"),
       playerName: $("#playerName"),
@@ -635,6 +641,101 @@
       state = structuredClone(initialState);
       localStorage.removeItem(STORAGE_KEY);
       render();
+    }
+
+    function safeFileNamePart(value) {
+      return String(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9_-]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase();
+    }
+
+    function exportTournament() {
+      const now = new Date();
+      const datePart = now.toISOString().slice(0, 10);
+      const exportData = {
+        app: "Appariements tournoi",
+        formatVersion: 1,
+        exportedAt: now.toISOString(),
+        storageKey: STORAGE_KEY,
+        tournament: state
+      };
+
+      const blob = new Blob(
+        [JSON.stringify(exportData, null, 2)],
+        { type: "application/json;charset=utf-8" }
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const firstPlayer = state.players[0]?.name || "tournoi";
+      const label = safeFileNamePart(firstPlayer) || "tournoi";
+      link.href = url;
+      link.download = `sauvegarde-${label}-${datePart}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function isValidImportedState(candidate) {
+      if (!candidate || typeof candidate !== "object") return false;
+      if (!Array.isArray(candidate.players) || !Array.isArray(candidate.rounds)) return false;
+      if (typeof candidate.started !== "boolean") return false;
+      if (!Number.isInteger(candidate.currentRound) || candidate.currentRound < 0) return false;
+
+      return candidate.players.every((player) =>
+        player &&
+        typeof player.id === "string" &&
+        typeof player.name === "string" &&
+        Number.isFinite(Number(player.score)) &&
+        Array.isArray(player.opponents) &&
+        Array.isArray(player.colors)
+      );
+    }
+
+    async function importTournament(file) {
+      if (!file) return;
+
+      try {
+        const raw = await file.text();
+        const parsed = JSON.parse(raw);
+        const candidate = parsed?.tournament ?? parsed;
+
+        if (!isValidImportedState(candidate)) {
+          throw new Error("Format de sauvegarde non reconnu.");
+        }
+
+        const confirmed = confirm(
+          "Importer cette sauvegarde remplacera le tournoi actuellement présent dans ce navigateur. Continuer ?"
+        );
+        if (!confirmed) return;
+
+        state = {
+          ...structuredClone(initialState),
+          ...candidate,
+          activeTab: ["players", "round", "standings", "history"].includes(candidate.activeTab)
+            ? candidate.activeTab
+            : "players",
+          players: candidate.players.map((player) => ({
+            ...player,
+            initialRating: parseRating(player.initialRating ?? player.rating ?? 1000),
+            score: Number(player.score) || 0,
+            opponents: Array.isArray(player.opponents) ? player.opponents : [],
+            colors: Array.isArray(player.colors) ? player.colors : [],
+            hadBye: Boolean(player.hadBye)
+          })),
+          rounds: candidate.rounds
+        };
+
+        saveAndRender();
+        alert("Sauvegarde importée avec succès.");
+      } catch (error) {
+        alert(`Import impossible : ${error.message}`);
+      } finally {
+        els.importFile.value = "";
+      }
     }
 
     function generateNextRound() {
@@ -918,6 +1019,7 @@
         ? "Le tournoi est démarré, la liste des joueurs est verrouillée."
         : "Ajoute entre 4 et 30 joueurs avant de démarrer.";
       els.startBtn.disabled = state.started || count < 4;
+      els.exportBtn.disabled = count === 0 && state.rounds.length === 0;
       els.playerName.disabled = state.started || count >= 30;
       els.playerRating.disabled = state.started || count >= 30;
       els.playerForm.querySelector("button").disabled = state.started || count >= 30;
@@ -1077,6 +1179,11 @@
     });
 
     els.startBtn.addEventListener("click", startTournament);
+    els.exportBtn.addEventListener("click", exportTournament);
+    els.importBtn.addEventListener("click", () => els.importFile.click());
+    els.importFile.addEventListener("change", (event) => {
+      importTournament(event.target.files?.[0]);
+    });
     els.resetBtn.addEventListener("click", resetTournament);
     els.nextRoundBtn.addEventListener("click", generateNextRound);
 
